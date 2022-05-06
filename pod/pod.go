@@ -43,6 +43,10 @@ func (s *Service) List(ctx context.Context, namespace string) (*corev1.PodList, 
 
 // Apply applies the pod.
 func (s *Service) Apply(ctx context.Context, namespace string, pod *v1.PodApplyConfiguration) (*corev1.Pod, error) {
+	if err := s.getOrCreateNamespace(ctx, namespace); err != nil {
+		return nil, xerrors.Errorf("get or create namespace: %w", err)
+	}
+
 	pod.WithKind("Pod")
 	pod.WithAPIVersion("v1")
 
@@ -82,6 +86,18 @@ func (s *Service) DeleteCollection(ctx context.Context, namespace string, lopts 
 		GracePeriodSeconds: &noGrace,
 	}, lopts); err != nil {
 		return fmt.Errorf("delete collection of pods: %w", err)
+	}
+	return nil
+}
+
+func (s *Service) getOrCreateNamespace(ctx context.Context, namespace string) error {
+	_, err := s.client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if err != nil {
+		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+		_, err = s.client.CoreV1().Namespaces().Create(ctx, nsSpec, metav1.CreateOptions{})
+		if err != nil {
+			return xerrors.Errorf("create namespace: %w", err)
+		}
 	}
 	return nil
 }
