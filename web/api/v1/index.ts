@@ -6,8 +6,7 @@ export const instance = axios.create({
   withCredentials: true,
 });
 
-const namespace = "default";
-export const namespaceURL = "namespaces/" + namespace;
+export const namespaceURL = "namespaces/";
 
 export const k8sBaseURL = process.env.KUBE_API_SERVER_URL + "/api/v1/";
 export const k8sInstance = axios.create({

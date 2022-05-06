@@ -3,7 +3,7 @@ import {
   applyPersistentVolumeClaim,
   deletePersistentVolumeClaim,
   getPersistentVolumeClaim,
-  listPersistentVolumeClaim,
+  listAllNamespacesPersistentVolumeClaim,
 } from "~/api/v1/pvc";
 import { V1PersistentVolumeClaim } from "@kubernetes/client-node";
 
@@ -55,7 +55,7 @@ export default function pvcStore() {
     },
 
     async fetchlist() {
-      const pvcs = await listPersistentVolumeClaim();
+      const pvcs = await listAllNamespacesPersistentVolumeClaim();
       state.pvcs = pvcs.items;
     },
 
@@ -67,17 +67,19 @@ export default function pvcStore() {
     async fetchSelected() {
       if (
         state.selectedPersistentVolumeClaim?.item.metadata?.name &&
+        state.selectedPersistentVolumeClaim?.item.metadata?.namespace &&
         !this.selected?.isNew
       ) {
         const p = await getPersistentVolumeClaim(
-          state.selectedPersistentVolumeClaim.item.metadata.name
+          state.selectedPersistentVolumeClaim.item.metadata.name,
+          state.selectedPersistentVolumeClaim.item.metadata.namespace
         );
         this.select(p, false);
       }
     },
 
-    async delete(name: string) {
-      await deletePersistentVolumeClaim(name);
+    async delete(name: string, ns: string) {
+      await deletePersistentVolumeClaim(name, ns);
       await this.fetchlist();
     },
   };

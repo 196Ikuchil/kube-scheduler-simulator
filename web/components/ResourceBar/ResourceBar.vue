@@ -82,7 +82,7 @@ interface Store {
   readonly selected: object | null;
   resetSelected(): void;
   apply(_: Resource): Promise<void>;
-  delete(_: string): Promise<void>;
+  delete(_: string, __?: string): Promise<void>;
   fetchSelected(): Promise<void>;
 }
 
@@ -238,6 +238,29 @@ export default defineComponent({
     };
 
     const deleteOnClick = () => {
+      if (
+        selected.value?.resourceKind === "Pod" ||
+        selected.value?.resourceKind === "PersistentVolumeClaim"
+      ) {
+        // When delete a namespaced resource, the namespace must be specified in the URL.
+        if (
+          //@ts-ignore
+          selected.value?.item.metadata?.name &&
+          //@ts-ignore
+          selected.value?.item.metadata?.namespace &&
+          store
+        ) {
+          store
+            .delete(
+              //@ts-ignore
+              selected.value.item.metadata.name,
+              //@ts-ignore
+              selected.value.item.metadata.namespace
+            )
+            .catch((e) => setServerErrorMessage(e));
+        }
+        return;
+      }
       if (selected.value?.resourceKind === "Node") {
         // when the Node is deleted, all Pods on the Node should be deleted as well.
         //@ts-ignore
@@ -248,7 +271,7 @@ export default defineComponent({
             if (p.spec?.nodeName === selected.value?.item.metadata?.name) {
               podstore
                 //@ts-ignore
-                .delete(p.metadata?.name)
+                .delete(p.metadata?.name, p.metadata?.namespace)
                 .catch((e) => setServerErrorMessage(e));
             }
           });

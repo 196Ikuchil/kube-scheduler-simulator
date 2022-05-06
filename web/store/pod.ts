@@ -1,5 +1,10 @@
 import { reactive } from "@nuxtjs/composition-api";
-import { applyPod, deletePod, getPod, listPod } from "~/api/v1/pod";
+import {
+  applyPod,
+  deletePod,
+  getPod,
+  listAllNamespacesPod,
+} from "~/api/v1/pod";
 import { V1Pod } from "@kubernetes/client-node";
 
 type stateType = {
@@ -57,7 +62,7 @@ export default function podStore() {
     },
 
     async fetchlist() {
-      const listpods = await listPod();
+      const listpods = await listAllNamespacesPod();
       const pods = listpods.items;
       const result: { [key: string]: Array<V1Pod> } = {};
       result["unscheduled"] = [];
@@ -76,8 +81,15 @@ export default function podStore() {
     },
 
     async fetchSelected() {
-      if (this.selected?.item.metadata?.name && !this.selected?.isNew) {
-        const p = await getPod(this.selected.item.metadata.name);
+      if (
+        this.selected?.item.metadata?.name &&
+        this.selected?.item.metadata?.namespace &&
+        !this.selected?.isNew
+      ) {
+        const p = await getPod(
+          this.selected.item.metadata.name,
+          this.selected.item.metadata.namespace
+        );
         this.select(p, false);
       }
     },
@@ -87,8 +99,8 @@ export default function podStore() {
       await this.fetchlist();
     },
 
-    async delete(name: string) {
-      await deletePod(name);
+    async delete(name: string, ns: string) {
+      await deletePod(name, ns);
       await this.fetchlist();
     },
   };

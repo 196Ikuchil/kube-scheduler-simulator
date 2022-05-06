@@ -13,7 +13,7 @@ export const applyPod = async (req: V1Pod) => {
     }
     const res = await k8sInstance.patch<V1Pod>(
       namespaceURL +
-        `/pods/${req.metadata.name}?fieldManager=simulator&force=true`,
+        `${req.metadata.namespace}/pods/${req.metadata.name}?fieldManager=simulator&force=true`,
       req,
       { headers: { "Content-Type": "application/apply-patch+yaml" } }
     );
@@ -23,9 +23,12 @@ export const applyPod = async (req: V1Pod) => {
   }
 };
 
-export const listPod = async () => {
+export const listPod = async (ns: string) => {
   try {
-    const res = await k8sInstance.get<V1PodList>(namespaceURL + `/pods`, {});
+    const res = await k8sInstance.get<V1PodList>(
+      namespaceURL + `${ns}/pods`,
+      {}
+    );
     return res.data;
   } catch (e: any) {
     throw new Error(`failed to list pods: ${e}`);
@@ -41,10 +44,10 @@ export const listAllNamespacesPod = async () => {
   }
 };
 
-export const getPod = async (name: string) => {
+export const getPod = async (name: string, ns: string) => {
   try {
     const res = await k8sInstance.get<V1Pod>(
-      namespaceURL + `/pods/${name}`,
+      namespaceURL + `${ns}/pods/${name}`,
       {}
     );
     return res.data;
@@ -53,10 +56,10 @@ export const getPod = async (name: string) => {
   }
 };
 
-export const deletePod = async (name: string) => {
+export const deletePod = async (name: string, ns: string) => {
   try {
     const res = await k8sInstance.delete(
-      namespaceURL + `/pods/${name}?gracePeriodSeconds=0`,
+      namespaceURL + `${ns}/pods/${name}?gracePeriodSeconds=0`,
       {}
     );
     return res.data;

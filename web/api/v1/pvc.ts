@@ -18,7 +18,7 @@ export const applyPersistentVolumeClaim = async (
     }
     const res = await k8sInstance.patch<V1PersistentVolumeClaim>(
       namespaceURL +
-        `/persistentvolumeclaims/${req.metadata.name}?fieldManager=simulator&force=true`,
+        `${req.metadata.namespace}/persistentvolumeclaims/${req.metadata.name}?fieldManager=simulator&force=true`,
       req,
       { headers: { "Content-Type": "application/apply-patch+yaml" } }
     );
@@ -28,10 +28,10 @@ export const applyPersistentVolumeClaim = async (
   }
 };
 
-export const listPersistentVolumeClaim = async () => {
+export const listPersistentVolumeClaim = async (ns: string) => {
   try {
     const res = await k8sInstance.get<V1PersistentVolumeClaimList>(
-      namespaceURL + `/persistentvolumeclaims`,
+      namespaceURL + `${ns}/persistentvolumeclaims`,
       {}
     );
     return res.data;
@@ -40,7 +40,7 @@ export const listPersistentVolumeClaim = async () => {
   }
 };
 
-export const listAllNamespaacesPersistentVolumeClaim = async () => {
+export const listAllNamespacesPersistentVolumeClaim = async () => {
   try {
     const res = await k8sInstance.get<V1PersistentVolumeClaimList>(
       `/persistentvolumeclaims`,
@@ -54,10 +54,10 @@ export const listAllNamespaacesPersistentVolumeClaim = async () => {
   }
 };
 
-export const getPersistentVolumeClaim = async (name: string) => {
+export const getPersistentVolumeClaim = async (name: string, ns: string) => {
   try {
     const res = await k8sInstance.get<V1PersistentVolumeClaim>(
-      namespaceURL + `/persistentvolumeclaims/${name}`,
+      namespaceURL + `${ns}/persistentvolumeclaims/${name}`,
       {}
     );
     return res.data;
@@ -66,10 +66,10 @@ export const getPersistentVolumeClaim = async (name: string) => {
   }
 };
 
-export const deletePersistentVolumeClaim = async (name: string) => {
+export const deletePersistentVolumeClaim = async (name: string, ns: string) => {
   try {
     const res = await k8sInstance.delete(
-      namespaceURL + `/persistentvolumeclaims/${name}`,
+      namespaceURL + `${ns}/persistentvolumeclaims/${name}`,
       {}
     );
     return res.data;
