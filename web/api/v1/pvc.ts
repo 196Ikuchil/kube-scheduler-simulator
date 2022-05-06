@@ -40,6 +40,20 @@ export const listPersistentVolumeClaim = async () => {
   }
 };
 
+export const listAllNamespaacesPersistentVolumeClaim = async () => {
+  try {
+    const res = await k8sInstance.get<V1PersistentVolumeClaimList>(
+      `/persistentvolumeclaims`,
+      {}
+    );
+    return res.data;
+  } catch (e: any) {
+    throw new Error(
+      `failed to list all namespaces persistent volume claims: ${e}`
+    );
+  }
+};
+
 export const getPersistentVolumeClaim = async (name: string) => {
   try {
     const res = await k8sInstance.get<V1PersistentVolumeClaim>(

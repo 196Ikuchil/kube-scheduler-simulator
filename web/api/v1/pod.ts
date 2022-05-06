@@ -32,6 +32,15 @@ export const listPod = async () => {
   }
 };
 
+export const listAllNamespacesPod = async () => {
+  try {
+    const res = await k8sInstance.get<V1PodList>(`/pods`, {});
+    return res.data;
+  } catch (e: any) {
+    throw new Error(`failed to list all namespaces pods: ${e}`);
+  }
+};
+
 export const getPod = async (name: string) => {
   try {
     const res = await k8sInstance.get<V1Pod>(
