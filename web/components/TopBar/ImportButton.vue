@@ -104,9 +104,9 @@ export default defineComponent({
 
       reader.onload = function () {
         try {
-          const filedata: ResourcesForImport = yaml.load(
+          const filedata = yaml.load(
             reader.result as string
-          );
+          ) as ResourcesForImport;
           data.filedata = filedata;
           data.isImportButtonDisabled = false;
         } catch (e) {

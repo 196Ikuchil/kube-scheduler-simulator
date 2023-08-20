@@ -248,7 +248,7 @@ export default defineComponent({
 
     const applyOnClick = () => {
       if (store) {
-        const y = yaml.load(formData.value);
+        const y = yaml.load(formData.value) as Resource;
         store.apply(y).catch((e) => setServerErrorMessage(e));
       }
       drawer.value = false;
