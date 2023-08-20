@@ -37,6 +37,18 @@ const getTemplateEnv = (hostEnv) => {
 };
 
 export default {
+  build: {
+    extend(config) {
+      config.node = {
+        child_process: 'empty',
+        fs: 'empty'
+      }
+      config.module.rules.push({
+        test: /openid-client\/lib\/.*\.js$/,
+        loader: "node-loader",
+      })
+    }
+  },
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
     titleTemplate: "%s - scheduler-simulator",
