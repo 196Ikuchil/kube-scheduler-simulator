@@ -39,6 +39,10 @@ type SimulatorConfiguration struct {
 	// This is for the beta feature "Importing cluster's resources".
 	// This variable is used to find Kubeconfig required to access your
 	// cluster for importing resources to scheduler simulator.
+	ExternalKubeConfig string `json:"externalKubeConfig,omitempty"`
+
+	// This is used for the communicate with control plane components of the cluster.
+	// e.g.) api-server, each controllers..
 	KubeConfig string `json:"kubeConfig,omitempty"`
 
 	// This is the host of kube-apiserver which the simulator
@@ -62,4 +66,11 @@ type SimulatorConfiguration struct {
 	// This variable indicates whether an external scheduler
 	// is used.
 	ExternalSchedulerEnabled bool `json:"externalSchedulerEnabled,omitempty"`
+
+	// WithKwokMode indicates whether the simulator is activated for integration with Kwok.
+	// If it is true,
+	// - the simulator does not launch the apiserver or each controller,
+	//   but transfer them to kwok.
+	// - you also need to set `KubeConfig`.
+	WithKwokMode bool `json:"withKwokMode,omitempty"`
 }

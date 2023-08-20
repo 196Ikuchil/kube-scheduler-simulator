@@ -10,6 +10,7 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/xerrors"
 	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/kube-scheduler-simulator/simulator/config"
@@ -35,22 +36,24 @@ func startSimulator() error {
 		return xerrors.Errorf("get config: %w", err)
 	}
 
-	restclientCfg, apiShutdown, err := k8sapiserver.StartAPIServer(cfg.KubeAPIServerURL, cfg.EtcdURL, cfg.CorsAllowedOriginList)
-	if err != nil {
-		return xerrors.Errorf("start API server: %w", err)
+	// restclientCfg is for create client.
+	var restclientCfg *rest.Config
+	if !cfg.IsControlPlaneComponentDisabled() {
+		var apiShutdown func()
+		restclientCfg, apiShutdown, err = k8sapiserver.StartAPIServer(cfg.KubeAPIServerURL, cfg.EtcdURL, cfg.CorsAllowedOriginList)
+		if err != nil {
+			return xerrors.Errorf("start API server: %w", err)
+		}
+		defer apiShutdown()
+	} else {
+		restclientCfg = cfg.KubeClientCfg
 	}
-	defer apiShutdown()
 
+	// config is for communicate with the api-server.
 	client := clientset.NewForConfigOrDie(restclientCfg)
 
-	ctrlerShutdown, err := controller.RunController(client, restclientCfg)
-	if err != nil {
-		return xerrors.Errorf("start controllers: %w", err)
-	}
-	defer ctrlerShutdown()
-
 	importClusterResourceClient := &clientset.Clientset{}
-	if cfg.ExternalImportEnabled {
+	if !cfg.IsImportClusterResourceEnabled() {
 		importClusterResourceClient, err = clientset.NewForConfig(cfg.ExternalKubeClientCfg)
 		if err != nil {
 			return xerrors.Errorf("creates a new Clientset for the ExternalKubeClientCfg: %w", err)
@@ -65,10 +68,17 @@ func startSimulator() error {
 		return xerrors.Errorf("create an etcd client: %w", err)
 	}
 
-	// need to sleep here to make all controllers create initial resources. (like "system-" priorityclass.)
-	time.Sleep(1 * time.Second)
+	if cfg.IsControlPlaneComponentDisabled() {
+		ctrlerShutdown, err := controller.RunController(client, restclientCfg)
+		if err != nil {
+			return xerrors.Errorf("start controllers: %w", err)
+		}
+		defer ctrlerShutdown()
+		// need to sleep here to make all controllers create initial resources. (like "system-" priorityclass.)
+		time.Sleep(1 * time.Second)
+	}
 
-	dic, err := di.NewDIContainer(client, etcdclient, restclientCfg, cfg.InitialSchedulerCfg, cfg.ExternalImportEnabled, importClusterResourceClient, cfg.ExternalSchedulerEnabled, cfg.Port)
+	dic, err := di.NewDIContainer(client, etcdclient, restclientCfg, cfg.InitialSchedulerCfg, cfg.IsImportClusterResourceEnabled(), importClusterResourceClient, cfg.ExternalSchedulerEnabled, cfg.Port)
 	if err != nil {
 		return xerrors.Errorf("create di container: %w", err)
 	}
@@ -79,9 +89,9 @@ func startSimulator() error {
 		defer dic.SchedulerService().ShutdownScheduler()
 	}
 
-	// If ExternalImportEnabled is enabled, the simulator import resources
+	// If it is enabled, the simulator import resources
 	// from the target cluster that indicated by the `KUBECONFIG`.
-	if cfg.ExternalImportEnabled {
+	if cfg.IsImportClusterResourceEnabled() {
 		ctx := context.Background()
 		// This must be called after `StartScheduler`
 		if err := dic.ImportClusterResourceService().ImportClusterResources(ctx); err != nil {
