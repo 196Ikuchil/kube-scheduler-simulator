@@ -14,20 +14,22 @@ type selectedNamespace = {
   item: V1Namespace;
   resourceKind: string;
   isDeletable: boolean;
-}
+};
 
 type stateType = {
   selectedNamespace: selectedNamespace | null;
   namespaces: V1Namespace[];
-  lastResourceVersion: string,
-}
+  lastResourceVersion: string;
+};
 
 export default function namespaceStore() {
-  const state: stateType = reactive({
+  const initialState: stateType = {
     selectedNamespace: null,
     namespaces: [],
     lastResourceVersion: "",
-  });
+  };
+
+  const state: stateType = reactive({ ...initialState });
 
   const namespaceAPI = inject(NamespaceAPIKey);
   if (!namespaceAPI) {
@@ -58,7 +60,7 @@ export default function namespaceStore() {
           item: ns,
           resourceKind: "namespace",
           isDeletable: true,
-        }
+        };
       }
     },
     resetSelected() {
@@ -90,25 +92,32 @@ export default function namespaceStore() {
       if (!ns.metadata?.name) {
         throw new Error(
           "failed to delete namespace: node should have metadata.name"
-        )
+        );
       }
-      namespaceAPI.deleteNamespace(ns.metadata.name).then((res: V1Namespace)=>{
-        // When deleting a namespace then it still exists, there is the possibility that any finalizers are specified.
-        // We expect that this condition would be almost true.
-        if (res.status?.phase === "Terminating" ) {
-          res.spec!.finalizers = []
-          namespaceAPI.finalizeNamespace(res)
-        }
-      }).catch((e)=> {
-        throw new Error(`failed during the delete process`)
-      })
-
+      namespaceAPI
+        .deleteNamespace(ns.metadata.name)
+        .then((res: V1Namespace) => {
+          // When deleting a namespace then it still exists, there is the possibility that any finalizers are specified.
+          // We expect that this condition would be almost true.
+          if (res.status?.phase === "Terminating") {
+            res.spec!.finalizers = [];
+            namespaceAPI.finalizeNamespace(res);
+          }
+        })
+        .catch((e) => {
+          throw new Error(`failed during the delete process`);
+        });
     },
     // initList calls list API, and stores current resource data and the lastResourceVersion.
     async initList() {
+      this.reset();
       const listns = await namespaceAPI.listNamespace();
       state.namespaces = createResourceState<V1Namespace>(listns.items);
       state.lastResourceVersion = listns.metadata?.resourceVersion!;
+    },
+    // reset resets state data to initialState.
+    reset() {
+      Object.assign(state, initialState);
     },
     // watchEventHandler handles each notified event.
     async watchEventHandler(eventType: WatchEventType, ns: V1Namespace) {
@@ -129,7 +138,7 @@ export default function namespaceStore() {
           break;
       }
     },
-  }
+  };
 }
 
 export type NamespaceStore = ReturnType<typeof namespaceStore>;

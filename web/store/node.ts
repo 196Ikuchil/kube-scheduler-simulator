@@ -24,11 +24,14 @@ type selectedNode = {
 };
 
 export default function nodeStore() {
-  const state: stateType = reactive({
+  const initialState: stateType = {
     selectedNode: null,
     nodes: [],
     lastResourceVersion: "",
-  });
+  };
+
+  const state: stateType = reactive({ ...initialState });
+
   const nodeAPI = inject(NodeAPIKey);
   if (!nodeAPI) {
     throw new Error(`${NodeAPIKey.description} is not provided`);
@@ -87,15 +90,21 @@ export default function nodeStore() {
       } else {
         throw new Error(
           "failed to delete node: node should have metadata.name"
-        )
+        );
       }
     },
 
     // initList calls list API, and stores current resource data and lastResourceVersion.
     async initList() {
+      this.reset();
       const listnodes = await nodeAPI.listNode();
       state.nodes = createResourceState<V1Node>(listnodes.items);
       state.lastResourceVersion = listnodes.metadata?.resourceVersion!;
+    },
+
+    // reset resets state data to initialState.
+    reset() {
+      Object.assign(state, initialState);
     },
 
     // watchEventHandler handles each notified event.

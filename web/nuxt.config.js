@@ -103,6 +103,8 @@ export default {
     // alphaTableViews is a optional parameter for the datatable view. This is an alpha feature.
     // If this value is set to "1", the datatable view will be enabled.
     alphaTableViews: process.env.ALPHA_TABLE_VIEWS || "0",
+    // alphaKubeConfigSetting is a optional parameter for new feature configure connection information to api server using KubeConfig.
+    alphaKubeConfigSetting: process.env.ALPHA_KUBE_CONFIG_SETTING || "0"
   },
 
   env: getTemplateEnv(process.env.HOST_ENV),

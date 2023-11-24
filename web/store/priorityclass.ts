@@ -24,11 +24,13 @@ type selectedPriorityClass = {
 };
 
 export default function priorityclassStore() {
-  const state: stateType = reactive({
+  const initialState: stateType = {
     selectedPriorityClass: null,
     priorityclasses: [],
     lastResourceVersion: "",
-  });
+  };
+
+  const state: stateType = reactive({ ...initialState });
 
   const priorityClassAPI = inject(PriorityClassAPIKey);
   if (!priorityClassAPI) {
@@ -102,11 +104,11 @@ export default function priorityclassStore() {
           "failed to delete priorityclass: priorityclass should have metadata.name"
         );
       }
-
     },
 
     // initList calls list API, and stores current resource data and lastResourceVersion.
     async initList() {
+      this.reset();
       const listpriorityclasses = await priorityClassAPI.listPriorityClass();
       state.priorityclasses = createResourceState<V1PriorityClass>(
         listpriorityclasses.items
@@ -115,6 +117,10 @@ export default function priorityclassStore() {
         listpriorityclasses.metadata?.resourceVersion!;
     },
 
+    // reset resets state data to initialState.
+    reset() {
+      Object.assign(state, initialState);
+    },
     // watchEventHandler handles each notified event.
     async watchEventHandler(eventType: WatchEventType, pc: V1PriorityClass) {
       switch (eventType) {

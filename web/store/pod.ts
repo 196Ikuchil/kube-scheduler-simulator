@@ -24,11 +24,13 @@ export type SelectedPod = {
 };
 
 export default function podStore() {
-  const state: stateType = reactive({
+  const initialState: stateType = {
     selectedPod: null,
     pods: {},
     lastResourceVersion: "",
-  });
+  };
+
+  const state: stateType = reactive({ ...initialState });
 
   const podAPI = inject(PodAPIKey);
   if (!podAPI) {
@@ -107,8 +109,15 @@ export default function podStore() {
     },
 
     async fetchSelected() {
-      if (this.selected?.item.metadata?.name && this.selected?.item.metadata?.namespace && !this.selected?.isNew) {
-        const p = await podAPI.getPod(this.selected.item.metadata.namespace, this.selected.item.metadata.name);
+      if (
+        this.selected?.item.metadata?.name &&
+        this.selected?.item.metadata?.namespace &&
+        !this.selected?.isNew
+      ) {
+        const p = await podAPI.getPod(
+          this.selected.item.metadata.namespace,
+          this.selected.item.metadata.name
+        );
         this.select(p, false);
       }
     },
@@ -130,17 +139,21 @@ export default function podStore() {
       if (p.metadata?.name && p.metadata.namespace) {
         await podAPI.deletePod(p.metadata.namespace, p.metadata.name);
       } else {
-        throw new Error(
-          "failed to delete pod: pod should have metadata.name"
-        );
+        throw new Error("failed to delete pod: pod should have metadata.name");
       }
     },
 
     // initList calls list API, and stores current resource data and lastResourceVersion.
     async initList() {
+      this.reset();
       const listpods = await podAPI.listPod();
       createPodState(listpods.items);
       state.lastResourceVersion = listpods.metadata?.resourceVersion!;
+    },
+
+    // reset resets state data to initialState.
+    reset() {
+      Object.assign(state, initialState);
     },
 
     // watchEventHandler handles each notified event.

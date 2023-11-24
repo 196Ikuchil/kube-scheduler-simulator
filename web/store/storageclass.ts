@@ -24,12 +24,13 @@ type selectedStorageClass = {
 };
 
 export default function storageclassStore() {
-  const state: stateType = reactive({
+  const initialState: stateType = {
     selectedStorageClass: null,
     storageclasses: [],
     lastResourceVersion: "",
-  });
+  };
 
+  const state: stateType = reactive({ ...initialState });
   const storageClassAPI = inject(StorageClassAPIKey);
   if (!storageClassAPI) {
     throw new Error(`${StorageClassAPIKey.description} is not provided`);
@@ -100,11 +101,17 @@ export default function storageclassStore() {
 
     // initList calls list API, and stores current resource data and lastResourceVersion.
     async initList() {
+      this.reset();
       const liststorageclasses = await storageClassAPI.listStorageClass();
       state.storageclasses = createResourceState<V1StorageClass>(
         liststorageclasses.items
       );
       state.lastResourceVersion = liststorageclasses.metadata?.resourceVersion!;
+    },
+
+    // reset resets state data to initialState.
+    reset() {
+      Object.assign(state, initialState);
     },
 
     // watchEventHandler handles each notified event.

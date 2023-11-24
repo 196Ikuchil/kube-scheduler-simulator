@@ -5,7 +5,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, onMounted } from "@nuxtjs/composition-api";
+import {
+  defineComponent,
+  inject,
+  onMounted,
+  useContext,
+} from "@nuxtjs/composition-api";
 import PodStoreKey from "./StoreKey/PodStoreKey";
 import NodeStoreKey from "./StoreKey/NodeStoreKey";
 import PersistentVolumeClaimStoreKey from "./StoreKey/PVCStoreKey";
@@ -29,6 +34,7 @@ import {
 
 export default defineComponent({
   setup() {
+    const { $config } = useContext();
     const watcherAPI = inject(WatcherAPIKey);
     if (!watcherAPI) {
       throw new Error(`${WatcherAPIKey.description} is not provided`);
@@ -72,6 +78,13 @@ export default defineComponent({
 
     // Initializes each resource and starts watching.
     onMounted(async () => {
+      // If this feature is enabled, this app will not try to access
+      // to the api server until config is set.
+      if (!$config.alphaKubeConfigSetting) {
+        startResourcesWatch();
+      }
+    });
+    const startResourcesWatch = async () => {
       await pstore.initList();
       await nstore.initList();
       await pvcstore.initList();
@@ -80,7 +93,7 @@ export default defineComponent({
       await storageclassstore.initList();
       await namespacestore.initList();
       await watchAndUpdates();
-    });
+    };
 
     const createlastResourceVersions = (): LastResourceVersions => {
       return {

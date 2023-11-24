@@ -24,11 +24,13 @@ type selectedPersistentVolume = {
 };
 
 export default function pvStore() {
-  const state: stateType = reactive({
+  const initialState: stateType = {
     selectedPersistentVolume: null,
     pvs: [],
     lastResourceVersion: "",
-  });
+  };
+
+  const state: stateType = reactive({ ...initialState });
 
   const pvAPI = inject(PVAPIKey);
   if (!pvAPI) {
@@ -100,9 +102,15 @@ export default function pvStore() {
 
     // initList calls list API, and stores current resource data and lastResourceVersion.
     async initList() {
+      this.reset();
       const listpvs = await pvAPI.listPersistentVolume();
       state.pvs = createResourceState<V1PersistentVolume>(listpvs.items);
       state.lastResourceVersion = listpvs.metadata?.resourceVersion!;
+    },
+
+    // reset resets state data to initialState.
+    reset() {
+      Object.assign(state, initialState);
     },
 
     // watchEventHandler handles each notified event.

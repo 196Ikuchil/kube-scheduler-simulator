@@ -24,11 +24,13 @@ type selectedPersistentVolumeClaim = {
 };
 
 export default function pvcStore() {
-  const state: stateType = reactive({
+  const initialState: stateType = {
     selectedPersistentVolumeClaim: null,
     pvcs: [],
     lastResourceVersion: "",
-  });
+  };
+
+  const state: stateType = reactive({ ...initialState });
 
   const pvcAPI = inject(PVCAPIKey);
   if (!pvcAPI) {
@@ -84,7 +86,7 @@ export default function pvcStore() {
       ) {
         const p = await pvcAPI.getPersistentVolumeClaim(
           state.selectedPersistentVolumeClaim.item.metadata.namespace,
-          state.selectedPersistentVolumeClaim.item.metadata.name,
+          state.selectedPersistentVolumeClaim.item.metadata.name
         );
         this.select(p, false);
       }
@@ -92,7 +94,10 @@ export default function pvcStore() {
 
     async delete(pvc: V1PersistentVolumeClaim) {
       if (pvc.metadata?.name && pvc.metadata?.namespace) {
-        await pvcAPI.deletePersistentVolumeClaim(pvc.metadata.namespace, pvc.metadata.name);
+        await pvcAPI.deletePersistentVolumeClaim(
+          pvc.metadata.namespace,
+          pvc.metadata.name
+        );
       } else {
         throw new Error(
           "failed to delete persistentvolumeclaim: persistentvolumeclaim should have metadata.name"
@@ -102,9 +107,14 @@ export default function pvcStore() {
 
     // initList calls list API, and stores current resource data and lastResourceVersion.
     async initList() {
+      this.reset();
       const listpvcs = await pvcAPI.listPersistentVolumeClaim();
       state.pvcs = createResourceState<V1PersistentVolumeClaim>(listpvcs.items);
       state.lastResourceVersion = listpvcs.metadata?.resourceVersion!;
+    },
+    // reset resets state data to initialState.
+    reset() {
+      Object.assign(state, initialState);
     },
 
     // watchEventHandler handles each notified event.
