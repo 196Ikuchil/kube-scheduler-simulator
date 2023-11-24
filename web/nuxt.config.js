@@ -51,7 +51,14 @@ export default {
     ],
     link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
   },
-
+  build: {
+    extend: function (config, { isDev, isClient }) {
+      config.node = {
+        // this is used on client-node but its security-holder package.
+        fs: "empty",
+      };
+    },
+  },
   // Global CSS: https://go.nuxtjs.dev/config-css
   css: [],
 
@@ -104,7 +111,7 @@ export default {
     // If this value is set to "1", the datatable view will be enabled.
     alphaTableViews: process.env.ALPHA_TABLE_VIEWS || "0",
     // alphaKubeConfigSetting is a optional parameter for new feature configure connection information to api server using KubeConfig.
-    alphaKubeConfigSetting: process.env.ALPHA_KUBE_CONFIG_SETTING || "0"
+    alphaKubeConfigSetting: process.env.ALPHA_KUBE_CONFIG_SETTING || "0",
   },
 
   env: getTemplateEnv(process.env.HOST_ENV),

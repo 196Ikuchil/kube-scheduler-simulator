@@ -2,7 +2,6 @@ import { V1Pod, V1PodList } from "@kubernetes/client-node";
 import { AxiosInstance } from "axios";
 
 export default function podAPI(k8sInstance: AxiosInstance) {
-  const defaultNamespace = "default"
   return {
     // createPod accepts only Pod that has .metadata.GeneratedName.
     // If you want to create a Pod that has .metadata.Name, use applyPod instead.

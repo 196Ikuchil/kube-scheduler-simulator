@@ -5,7 +5,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, provide, useContext } from "@nuxtjs/composition-api";
+import { defineComponent, provide, useContext, reactive, watch } from "@nuxtjs/composition-api";
 import podAPI from "./v1/pod";
 import nodeAPI from "./v1/node";
 import priorityClassAPI from "./v1/priorityclass";
@@ -28,10 +28,15 @@ import { SchedulerconfigurationAPIKey } from "./APIProviderKeys";
 import { StorageClassAPIKey } from "./APIProviderKeys";
 import { NamespaceAPIKey } from "./APIProviderKeys";
 import { WatcherAPIKey } from "./APIProviderKeys";
+import  APIServerSettings  from "~/store/APIserverSettings";
+import {APIServerConfigs} from "~/types/kubeconfig"
+import {APIServerSettingsKey} from "~/store/APIserverSettings";
 
 export default defineComponent({
   setup() {
     const { app } = useContext();
+    const apiServerSettings = reactive(APIServerSettings());
+    provide(APIServerSettingsKey, apiServerSettings);
     provide(PodAPIKey, podAPI(app.$k8sInstance));
     provide(NodeAPIKey, nodeAPI(app.$k8sInstance));
     provide(PriorityClassAPIKey, priorityClassAPI(app.$k8sSchedulingInstance));
@@ -46,6 +51,21 @@ export default defineComponent({
     provide(StorageClassAPIKey, storageClassAPI(app.$k8sStorageInstance));
     provide(NamespaceAPIKey, namespaceAPI(app.$k8sInstance))
     provide(WatcherAPIKey, watcherAPI(app.$instance));
+
+    const applyToAPIClient = () => {
+      console.log("set new config.")
+      // instance生成
+      // each provide実行
+      // each apiのinit実行
+    };
+
+    watch(
+      apiServerSettings,
+      () => {
+        applyToAPIClient()
+      },
+    );
+
     return {};
   },
 });
