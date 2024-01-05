@@ -1,7 +1,7 @@
 .PHONY: tools
 tools:
 	cd ./tools; \
-	cat tools.go | grep "_" | awk -F'"' '{print $$2}' | xargs -tI % go install %
+	cat tools.go | grep "_" | awk -F'"' '{print $$2}' | xargs -tI % go install %@latest
 
 .PHONY: lint
 # run golangci-lint on all modules

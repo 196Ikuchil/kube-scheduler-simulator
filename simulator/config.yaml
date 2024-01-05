@@ -22,6 +22,10 @@ corsAllowedOriginList:
 # This is for the beta feature "Importing cluster's resources".
 # This variable is used to find Kubeconfig required to access your
 # cluster for importing resources to scheduler simulator.
+externalKubeConfig: ""
+
+# This is used for the communicate with control plane components of the cluster.
+# e.g.) api-server, each controllers.. 
 kubeConfig: ""
 
 # This is the host of kube-apiserver which the simulator
@@ -46,3 +50,4 @@ externalImportEnabled: false
 # This variable indicates whether an external scheduler
 # is used.
 externalSchedulerEnabled: false
+

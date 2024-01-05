@@ -31,14 +31,21 @@ type Config struct {
 	KubeAPIServerURL      string
 	EtcdURL               string
 	CorsAllowedOriginList []string
-	// ExternalImportEnabled indicates whether the simulator will import resources from an target cluster or not.
-	ExternalImportEnabled bool
+	// externalImportEnabled indicates whether the simulator will import resources from an target cluster or not.
+	externalImportEnabled bool
 	// ExternalKubeClientCfg is KubeConfig to get resources from external cluster.
-	// This field is non-empty only when ExternalImportEnabled == true.
+	// This field is non-empty only when externalImportEnabled == true.
 	ExternalKubeClientCfg *rest.Config
 	InitialSchedulerCfg   *configv1.KubeSchedulerConfiguration
 	// ExternalSchedulerEnabled indicates whether an external scheduler is enabled.
 	ExternalSchedulerEnabled bool
+	// withKwokMode indicates whether the preparation of k8s control plane components is left to other(e.g. kwok).
+	// NOTE: This is used until the process of starting api-server and controller is completely removed from the simulator.
+	withKwokMode bool
+	// KubeClientCfg is kubeconfig which is used for the communicate with control plane components of the cluster.
+	// e.g. api-server, each controllers..
+	// This field is non-empty only when withKwokMode == true.
+	KubeClientCfg *rest.Config
 }
 
 const (
@@ -73,7 +80,11 @@ func NewConfig() (*Config, error) {
 	externalimportenabled := getExternalImportEnabled()
 	externalKubeClientCfg := &rest.Config{}
 	if externalimportenabled {
-		externalKubeClientCfg, err = GetKubeClientConfig()
+		cfgPath := getExternalKubeConfigPath()
+		if cfgPath == "" {
+			return nil, xerrors.Errorf("failed to get external kubeconfig path. you need to specify the path for kubeconfig file of the target cluster if `externalimportenabled` is set to `true`.")
+		}
+		externalKubeClientCfg, err = loadKubeClientConfigFrom(cfgPath)
 		if err != nil {
 			return nil, xerrors.Errorf("get kube clientconfig: %w", err)
 		}
@@ -86,16 +97,38 @@ func NewConfig() (*Config, error) {
 
 	externalSchedEnabled := getExternalSchedulerEnabled()
 
+	kubeClientConfig := &rest.Config{}
+	withKwokMode := getWithKwokMode()
+	if withKwokMode {
+		// TODO: kubeschedulerconfig経由にすべき？
+		kubeClientConfig, err = GetKubeClientConfig()
+		if err != nil {
+			return nil, xerrors.Errorf("load kubeClientConfig from `~/.kube/config`: %w", err)
+		}
+	}
+
 	return &Config{
 		Port:                     port,
 		KubeAPIServerURL:         apiurl,
 		EtcdURL:                  etcdurl,
 		CorsAllowedOriginList:    corsAllowedOriginList,
 		InitialSchedulerCfg:      initialschedulerCfg,
-		ExternalImportEnabled:    externalimportenabled,
+		externalImportEnabled:    externalimportenabled,
 		ExternalKubeClientCfg:    externalKubeClientCfg,
 		ExternalSchedulerEnabled: externalSchedEnabled,
+		withKwokMode:             withKwokMode,
+		KubeClientCfg:            kubeClientConfig,
 	}, nil
+}
+
+// IsControlPlaneComponentDisabled indicates whether the simulator should launch the api-server and each controller.
+func (c Config) IsControlPlaneComponentDisabled() bool {
+	return c.withKwokMode
+}
+
+// IsImportClusterResourceEnabled indicates whether the import cluster resource feature is enabled.
+func (c Config) IsImportClusterResourceEnabled() bool {
+	return c.externalImportEnabled
 }
 
 // LoadYamlConfig read the yaml file and set configYaml.
@@ -199,6 +232,17 @@ func getCorsAllowedOriginList() ([]string, error) {
 	return urls, nil
 }
 
+// getWithKwokMode gets WITH_KWOK_MODE from environment variable first,
+// if empty from the config file.
+func getWithKwokMode() bool {
+	e := os.Getenv("WITH_KWOK_MODE")
+	b, err := strconv.ParseBool(e)
+	if e == "" || err != nil {
+		b = configYaml.WithKwokMode
+	}
+	return b
+}
+
 // validateURLs checks if all URLs in slice is valid or not.
 func validateURLs(urls []string) error {
 	for _, u := range urls {
@@ -280,9 +324,33 @@ func decodeSchedulerCfg(buf []byte) (*configv1.KubeSchedulerConfiguration, error
 	return sc, nil
 }
 
+// getExternalKubeConfigPath loads the path for kubeconfig file of external.
+// If not specified, returns `""`.
+func getExternalKubeConfigPath() string {
+	cfg := os.Getenv("EXTERNAL_KUBE_CONFIG")
+	if cfg == "" {
+		cfg = configYaml.ExternalKubeConfig
+	}
+	return cfg
+}
+
+// GetKubeClientConfig loads kubeconfig from default path `~/.kube/config`
+// and returns kubeClientConfig.
 func GetKubeClientConfig() (*rest.Config, error) {
+	return loadKubeClientConfig(clientcmd.NewDefaultClientConfigLoadingRules())
+}
+
+// loadKubeClientConfigFrom loads kubeconfig from specified path
+// and returns kubeClientConfig.
+func loadKubeClientConfigFrom(path string) (*rest.Config, error) {
+	return loadKubeClientConfig(&clientcmd.ClientConfigLoadingRules{ExplicitPath: path})
+}
+
+// loadKubeClientConfig loads kubeconfig according to passed rule
+// and returns kubeClientConfig.
+func loadKubeClientConfig(r *clientcmd.ClientConfigLoadingRules) (*rest.Config, error) {
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{})
+		r, &clientcmd.ConfigOverrides{})
 	clientConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return nil, xerrors.Errorf("get client config: %w", err)
